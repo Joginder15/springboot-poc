@@ -5,9 +5,12 @@ import com.engineering.journalApp.entity.User;
 import com.engineering.journalApp.repository.UserRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,7 +21,15 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
     public User saveEntry(User user){
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRoles(Arrays.asList("USER"));
+        return userRepository.save(user);
+    }
+
+    public User saveNewUser(User user){
         return userRepository.save(user);
     }
 
@@ -37,5 +48,4 @@ public class UserService {
     public User findByUserName(String userName){
         return userRepository.findByUserName(userName);
     }
-
 }
