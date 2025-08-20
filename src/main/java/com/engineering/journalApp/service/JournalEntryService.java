@@ -5,13 +5,15 @@ import com.engineering.journalApp.entity.User;
 import com.engineering.journalApp.repository.JournalEntryRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class JournalEntryService {
@@ -22,14 +24,13 @@ public class JournalEntryService {
     @Autowired
     private UserService userService;
 
-    @Transactional
+//    @Transactional
     public void saveEntry(JournalEntry journalEntry, String userName){
         try {
             User user = userService.findByUserName(userName);
             journalEntry.setCreatedDate(LocalDateTime.now());
             JournalEntry saved = journalEntryRepository.save(journalEntry);
             user.getJournalEntries().add(saved);
-            user.setUserName(null);
             userService.saveEntry(user);
         } catch(Exception e){
             System.out.println(e);
@@ -45,23 +46,44 @@ public class JournalEntryService {
         return journalEntryRepository.findById(id);
     }
 
-    public void deleteById(ObjectId id, String userName){
-        User user = userService.findByUserName(userName);
-        user.getJournalEntries().removeIf(journalEntry -> journalEntry.getId().equals(id));
-        userService.saveEntry(user);
-        journalEntryRepository.deleteById(id);
+//    @Transactional
+    public boolean deleteById(ObjectId id, String userName){
+        boolean removed = false;
+        try {
+            User user = userService.findByUserName(userName);
+            removed = user.getJournalEntries().removeIf(journalEntry -> journalEntry.getId().equals(id));
+            if (removed){
+                userService.saveEntry(user);
+                journalEntryRepository.deleteById(id);
+            }
+        } catch (Exception exception){
+            System.out.println(exception);
+            throw new RuntimeException("An exception occur while deleting the entry: ",exception);
+        }
+        return removed;
     }
 
-    public JournalEntry updateById(ObjectId objectId, JournalEntry journalEntry, String userName){
-        JournalEntry oldEntry = journalEntryRepository.findById(objectId).orElse(null);
-        if (Objects.nonNull(journalEntry)){
-            oldEntry.setTitle(Objects.nonNull(journalEntry.getTitle()) && !journalEntry.getTitle().isEmpty() ?
-                    journalEntry.getTitle() : oldEntry.getTitle());
-            oldEntry.setContent(Objects.nonNull(journalEntry.getContent()) && !journalEntry.getContent().isEmpty() ?
-                    journalEntry.getContent() : oldEntry.getContent());
-            oldEntry.setLastModifiedDate(LocalDateTime.now());
+    public JournalEntry updateById(ObjectId objectId, JournalEntry newEntry){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String name = authentication.getName();
+        User user = userService.findByUserName(name);
+        List<JournalEntry> journalEntries =
+                user.getJournalEntries().stream().filter(x -> x.getId().equals(objectId)).collect(Collectors.toList());
+        JournalEntry savedJournalEntry = null;
+        if (!journalEntries.isEmpty()) {
+            Optional<JournalEntry> journalEntry = journalEntryRepository.findById(objectId);
+            if (Objects.nonNull(journalEntry)){
+                JournalEntry oldEntry = journalEntry.get();
+                oldEntry.setTitle(Objects.nonNull(newEntry.getTitle()) && !newEntry.getTitle().isEmpty() ?
+                        newEntry.getTitle() : oldEntry.getTitle());
+                oldEntry.setContent(Objects.nonNull(newEntry.getContent()) && !newEntry.getContent().isEmpty() ?
+                        newEntry.getContent() : oldEntry.getContent());
+                oldEntry.setLastModifiedDate(LocalDateTime.now());
+                savedJournalEntry = journalEntryRepository.save(oldEntry);
+            }
         }
-        return journalEntryRepository.save(oldEntry);
+        return savedJournalEntry;
     }
+
 
 }

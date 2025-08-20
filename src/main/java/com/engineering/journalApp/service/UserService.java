@@ -23,13 +23,23 @@ public class UserService {
 
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public User saveEntry(User user){
+    public User saveNewUser(User user){
+        try {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            user.setRoles(Arrays.asList("USER"));
+            return userRepository.save(user);
+        } catch (Exception e){
+            throw new RuntimeException("Not found");
+        }
+    }
+
+    public User saveAdminUser(User user){
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRoles(Arrays.asList("USER"));
+        user.setRoles(Arrays.asList("USER", "ADMIN"));
         return userRepository.save(user);
     }
 
-    public User saveNewUser(User user){
+    public User saveEntry(User user){
         return userRepository.save(user);
     }
 

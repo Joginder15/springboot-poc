@@ -46,7 +46,7 @@ public class UserController {
         if (userInDb != null){
             userInDb.setUserName(user.getUserName());
             userInDb.setPassword(user.getPassword());
-            User updated = userService.saveEntry(userInDb);
+            User updated = userService.saveNewUser(userInDb);
             return new ResponseEntity<>(updated, HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
