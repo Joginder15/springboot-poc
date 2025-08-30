@@ -9,7 +9,7 @@ spring:
       auto-index-creation: true
 
 server:
-  port: 8083
+  port: 8082
   servlet:
     context-path: /journal
 
@@ -18,3 +18,7 @@ logging:
     com:
       engineering:
         journalApp: ERROR
+
+weather:
+  api:
+    key: aa64476ba28de3e85749789ad34830cd
